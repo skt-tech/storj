@@ -111,6 +111,8 @@ func (server *Server) metrics(w http.ResponseWriter, r *http.Request) {
 	// writes https://prometheus.io/docs/instrumenting/exposition_formats/
 	// (https://prometheus.io/docs/concepts/metric_types/)
 	metricsMap := make(map[string][]string)
+
+	var uptime float64
 	server.registry.Stats(func(key monkit.SeriesKey, field string, val float64) {
 		measurement := sanitize(key.Measurement)
 
@@ -126,8 +128,18 @@ func (server *Server) metrics(w http.ResponseWriter, r *http.Request) {
 		fieldMetric := "field=\"" + sanitize(field) + "\""
 		metrics = append(metrics, fieldMetric)
 
+		// Get uptime
+		// TODO revisit
+		if measurement == "process" && field == "uptime" {
+			uptime = val
+		}
 		metricsMap[measurement] = append(metricsMap[measurement], fmt.Sprintf("%s{"+strings.Join(metrics, ",")+"} %g", measurement, val))
 	})
+
+	fmt.Fprintln(w, "# TYPE process_start_time_seconds gauge")
+	fmt.Fprintln(w, "# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.")
+	fmt.Fprintf(w, "process_start_time_seconds %d\n\n", time.Now().Unix()-int64(uptime))
+
 	for key, values := range metricsMap {
 		_, _ = fmt.Fprintf(w, "# TYPE %s gauge\n", key)
 		for _, v := range values {
