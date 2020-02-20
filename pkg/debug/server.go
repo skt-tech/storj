@@ -110,8 +110,14 @@ func (server *Server) Close() error {
 func (server *Server) metrics(w http.ResponseWriter, r *http.Request) {
 	// writes https://prometheus.io/docs/instrumenting/exposition_formats/
 	// (https://prometheus.io/docs/concepts/metric_types/)
+	metricsMap := make(map[string][]string)
 	server.registry.Stats(func(key monkit.SeriesKey, field string, val float64) {
 		measurement := sanitize(key.Measurement)
+
+		if _, exists := metricsMap[measurement]; !exists {
+			metricsMap[measurement] = []string{}
+		}
+
 		var metrics []string
 		for tag, tagVal := range key.Tags.All() {
 			metric := sanitize(tag) + "=\"" + sanitize(tagVal) + "\""
@@ -120,9 +126,15 @@ func (server *Server) metrics(w http.ResponseWriter, r *http.Request) {
 		fieldMetric := "field=\"" + sanitize(field) + "\""
 		metrics = append(metrics, fieldMetric)
 
-		_, _ = fmt.Fprintf(w, "# TYPE %s gauge\n%s{"+
-			strings.Join(metrics, ",")+"} %g\n", measurement, measurement, val)
+		metricsMap[measurement] = append(metricsMap[measurement], fmt.Sprintf("%s{"+strings.Join(metrics, ",")+"} %g", measurement, val))
 	})
+	for key, values := range metricsMap {
+		_, _ = fmt.Fprintf(w, "# TYPE %s gauge\n", key)
+		for _, v := range values {
+			fmt.Fprintf(w, "%s\n", v)
+		}
+		fmt.Fprintln(w)
+	}
 }
 
 // collectTraces collects traces until request is canceled.
