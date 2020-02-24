@@ -47,6 +47,7 @@ type Repairer struct {
 	Debug struct {
 		Listener net.Listener
 		Server   *debug.Server
+		Profiler *debug.Profiler
 	}
 
 	Metainfo *metainfo.Service
@@ -93,6 +94,14 @@ func NewRepairer(log *zap.Logger, full *identity.FullIdentity,
 			Run:   peer.Debug.Server.Run,
 			Close: peer.Debug.Server.Close,
 		})
+		if config.Debug.Profiler {
+			peer.Debug.Profiler = debug.NewProfiler(log.Named("debug profiler"), "satellite-repairer", versionInfo.Version.String())
+			peer.Services.Add(lifecycle.Item{
+				Name:  "profiling",
+				Run:   peer.Debug.Profiler.Run,
+				Close: peer.Debug.Profiler.Close,
+			})
+		}
 	}
 
 	{

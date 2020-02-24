@@ -34,6 +34,8 @@ type Config struct {
 
 	ControlTitle string `internal:"true"`
 	Control      bool   `help:"expose control panel" releaseDefault:"false" devDefault:"true"`
+
+	Profiler bool `help:"run a continuous cpu/mem profiler" releaseDefault:"true" devDefault:"false"`
 }
 
 // Server provides endpoints for debugging.
