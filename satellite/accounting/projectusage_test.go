@@ -103,7 +103,7 @@ func TestProjectUsageBandwidth(t *testing.T) {
 		expectedStatus   rpcstatus.StatusCode
 	}{
 		{name: "doesn't exceed storage or bandwidth project limit", expectedExceeded: false, expectedStatus: 0},
-		{name: "exceeds bandwidth project limit", expectedExceeded: true, expectedResource: "bandwidth", expectedStatus: rpcstatus.ResourceExhausted},
+		{name: "exceeds bandwidth project limit - disabled in metainfo download", expectedExceeded: true, expectedResource: "bandwidth"},
 	}
 
 	for _, tt := range cases {
@@ -145,11 +145,7 @@ func TestProjectUsageBandwidth(t *testing.T) {
 
 				// Execute test: check that the uplink gets an error when they have exceeded bandwidth limits and try to download a file
 				_, actualErr := planet.Uplinks[0].Download(ctx, planet.Satellites[0], bucketName, filePath)
-				if testCase.expectedResource == "bandwidth" {
-					require.True(t, errs2.IsRPC(actualErr, testCase.expectedStatus))
-				} else {
-					require.NoError(t, actualErr)
-				}
+				require.NoError(t, actualErr)
 			})
 		})
 	}
